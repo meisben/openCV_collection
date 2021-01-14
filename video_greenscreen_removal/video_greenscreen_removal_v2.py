@@ -88,27 +88,42 @@ def backgroundColorSelection():
 
     # ---Inner Function-------------------------#
 
-    def mouseClickCallback(mouseAction, xPocs, yPos, flags, myImg):
+    def mouseClickCallback(mouseAction, xPos, yPos, flags, myImg):
         """ Inner Function determines action when cuser clicks on background color
         """
         global clickBackgroundColor
-        # print(mouseAction)
+        global colorSelectonCoordXY
+
         if mouseAction == cv2.EVENT_LBUTTONDOWN or mouseAction == cv2.EVENT_RBUTTONDOWN:
             clickBackgroundColor = True
+            colorSelectonCoordXY = (xPos, yPos)
 
     # --- Main body of Function----------------#
 
+    duplicateFrame = currentFrame.copy()
+    cv2.putText(duplicateFrame, 'Please select background color with cursor', (10,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
+
+    frameHSV = cv2.cvtColor(currentFrame,cv2.COLOR_BGR2HSV)
+    print("HSV image shape = {}".format(frameHSV.shape))    
+
     cv2.namedWindow(imageWindowName)
-    cv2.setMouseCallback(imageWindowName, mouseClickCallback, currentFrame)
+    cv2.setMouseCallback(imageWindowName, mouseClickCallback, duplicateFrame)
     clickBackgroundColor = False
 
-    k = 0
     while clickBackgroundColor != True:
-        cv2.imshow(imageWindowName, currentFrame)
-        k = cv2.waitKey(20)
+        cv2.imshow(imageWindowName, duplicateFrame)
+        key = cv2.waitKey(20) # variable not used
+        if key & 0xFF == 27:
+            # Exit program if Esc key is pressed
+            print("Program exiting")
+            programState = 5
+            break
 
     if clickBackgroundColor == True:
         # Color section is completed
+        [backgroundHue, backgroundSat, backgroundVal] = frameHSV[colorSelectonCoordXY[0],colorSelectonCoordXY[1],:]
+        print("Background color selected as (X,Y): {}".format(colorSelectonCoordXY))
+        print("HSV values at this position: {}, {}, {}".format(backgroundHue, backgroundSat, backgroundVal))
         cv2.destroyAllWindows()
         programState = 2
 
@@ -164,6 +179,7 @@ def videoPaused():
 def exitStateMachine():
     global programState
     global exitStateMachine
+    cv2.destroyAllWindows()
     exitStateMachine = True
     
 
@@ -210,48 +226,3 @@ while True:
 
 
 
-
-
-
-# i = 0
-# while(capFore.isOpened()):
-    
-#     # This acts as a state machine, you can see this by uncommenting this line
-#     if i%10 = 0:
-#         print("Cycle: {}".format(i))
-
-#     # Capture frame-by-frame
-#     if playVideo:
-#         ret, frame = capFore.read()
-#         if ret == True:
-#             resultFrame = frame
-
-#     if colorSelected = False:
-#         # allow the user to select a background color
-#         userSelectBackgroundColor(frame)
-
-#     if videoReadyToStart = True:
-#         # Create a video window to display the results of the green screen removal
-#         cv2.namedWindow(videoWindowName, cv2.WINDOW_AUTOSIZE)
-
-#     key = cv2.waitKey(25)
-#     # if esc is pressed
-#     if key & 0xFF == 27:
-#         break
-#     # if spacebar is pressed
-#     if key & 0xFF == 32:
-#         playVideo = not playVideo
-
-#     # Display the resulting frame
-#     cv2.imshow(videoWindowName, frame)
-
-#     # display progress trackbar
-#     capForeFrameNumber = capFore.get(cv2.CAP_PROP_POS_FRAMES); 
-#     cv2.createTrackbar("Progress", videoWindowName, int(capForeFrameNumber / capForeLength * 100) , 100, progressTrackbarCallback)
-
-#     # other trackbars
-#     # cv2.createTrackbar("Tolerance", videoWindowName, toleranceFactor, 100, lambda *args: onChangeTolerance())
-#     # cv2.createTrackbar("Softness", videoWindowName, softnessFactor, 100, lambda *args: onChangeSoftness())
-#     # cv2.createTrackbar("Defringe", videoWindowName, defringeFactor, 100, lambda *args: onChangeDefringe())
-
-# cv2.destroyAllWindows()
