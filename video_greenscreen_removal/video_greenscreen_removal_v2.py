@@ -20,7 +20,7 @@ videoWindowName = "Greenscreen Video"
 exitStateMachine = False
 
 tolleranceChromaKeying = 50
-softnessChromaKeying = 50
+softnessChromaKeying = 0
 
 # ------------------------------------------#
 # Functions (global)                        #
@@ -43,6 +43,10 @@ def performChromaKeying(myFrame):
     global tolleranceChromaKeying # tollerance variable set by video track bar (user input)
     global softnessChromaKeying # softness factor set by video track bar (user input)
     
+    # blur video frame for softness
+    if softnessChromaKeying >= 1:
+        myFrame = cv2.GaussianBlur(myFrame, (5,5), softnessChromaKeying)
+
     # convert video frame from BGR to HSV color space
     frameHSV = cv2.cvtColor(myFrame,cv2.COLOR_BGR2HSV)
 
@@ -223,7 +227,7 @@ def videoPlaying():
     # Display trackbars
     cv2.createTrackbar("Progress", videoWindowName, progressPercent, 100, onProgressTrackbarChange)
     cv2.createTrackbar("Tolerance", videoWindowName, tolleranceChromaKeying, 100, onToleranceTrackbarChange)
-    cv2.createTrackbar("Softness", videoWindowName, softnessChromaKeying, 100, onSoftnessTrackbarChange)
+    cv2.createTrackbar("Softness", videoWindowName, softnessChromaKeying, 5, onSoftnessTrackbarChange)
 
     # Wait for user input (if any)
     key = cv2.waitKey(20)
