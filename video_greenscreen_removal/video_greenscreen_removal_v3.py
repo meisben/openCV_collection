@@ -1,6 +1,13 @@
+
+
+# ------------------------------------------#
+# Resources                                 #
+# ------------------------------------------#
+
 # https://codereview.stackexchange.com/questions/184044/processing-an-image-to-extract-green-screen-mask/184059#184059
 # https://stackoverflow.com/questions/2810970/how-to-remove-a-green-screen-portrait-background
 # https://stackoverflow.com/questions/42594993/gradient-mask-blending-in-opencv-python/48274875#48274875
+# https://note.nkmk.me/en/python-opencv-numpy-alpha-blend-mask/
 
 # ------------------------------------------#
 # Imports                                   #
@@ -48,13 +55,11 @@ def performChromaKeying(myFrame):
     global softnessChromaKeying # softness factor set by video track bar (user input)
     global colorCastChromaKeying # colorCast factor set by video track bar (user input)
 
-    # Perform Step1: filter out green pixels
+    # Perform Step1 and Step 3: filter out green pixels and apply faded transparent edge (alpha blending)
     result = convertGreenPixelsToTransparent(myFrame)
-    # Perform Step2: Removing color casting to recolor green pixels at the edges of the shape
+    # Perform Step2: Removing color casting to recolor green pixels at the edges of the shape (TBD -> extension work)
     if(colorCastChromaKeying>0):
         result = reduceGreenInEdgePixels(result)
-    # Perform Step3: Apply faded transparent edge
-    result = applyGradientTransparencyToEdge(result)
 
     return result
     
@@ -64,10 +69,6 @@ def convertGreenPixelsToTransparent(myFrame):
     global tolleranceChromaKeying # tollerance variable set by video track bar (user input)
     global softnessChromaKeying # softness factor set by video track bar (user input)
     global hue
-
-    # # blur video frame for softness
-    # if softnessChromaKeying >= 1:
-    #     myFrame = cv2.GaussianBlur(myFrame, (5,5), softnessChromaKeying)
 
     # convert video frame from BGR to HSV color space
     frameHSV = cv2.cvtColor(myFrame,cv2.COLOR_BGR2HSV)
@@ -93,14 +94,30 @@ def convertGreenPixelsToTransparent(myFrame):
     myMask = cv2.morphologyEx(myMask, cv2.MORPH_OPEN, np.ones((3,3),np.uint8))
     myMask = cv2.morphologyEx(myMask, cv2.MORPH_DILATE, np.ones((3,3),np.uint8))
 
-    myMask = cv2.GaussianBlur(myMask, (5,5), 5)
-
     # creating an inverted mask to segment out the background from the image
-    myMask = cv2.bitwise_not(myMask)
-
+    myMaskInv = cv2.bitwise_not(myMask)        
 
     #Segmenting the cloth out of the frame using bitwise and with the mask
-    result = cv2.bitwise_and(myFrame,myFrame,mask=myMask)
+    if softnessChromaKeying < 1:
+        myMaskInv = cv2.bitwise_not(myMask)
+        result = cv2.bitwise_and(myFrame,myFrame,mask=myMaskInv)
+        
+    else:
+        # blur mask for alpha trasnparency 
+        kernelOptions = [11,21,25,29,31,33]
+        kSize = kernelOptions[softnessChromaKeying]
+        print("kSize = ", kSize)
+        maskBlur = cv2.morphologyEx(myMask, cv2.MORPH_DILATE, np.ones((5,5),np.uint8), iterations = softnessChromaKeying)
+        maskBlur = cv2.bitwise_not(maskBlur) 
+        maskBlur = cv2.GaussianBlur(maskBlur, (kSize,kSize), 0)
+        # print(maskBlur.max())
+        
+        stackedMask = np.stack((maskBlur,)*3, axis=-1)
+        print("stackedMask max = ", stackedMask.max())
+        stackedMask = (stackedMask / 255)
+        print("stackedMask max = ", stackedMask.max())
+        result = myFrame * (stackedMask / 255)
+        
 
     return result
 
@@ -142,10 +159,6 @@ def reduceGreenInEdgePixels(myFrame):
     return result
 
     
-
-def applyGradientTransparencyToEdge(myFrame):
-    return myFrame
-
 # ------------------------------------------#
 # Trackbar callbacks                        #
 # ------------------------------------------#
@@ -294,8 +307,8 @@ def videoPlaying():
     # Display trackbars
     cv2.createTrackbar("Progress", videoWindowName, progressPercent, 100, onProgressTrackbarChange)
     cv2.createTrackbar("Tolerance", videoWindowName, tolleranceChromaKeying, 10, onToleranceTrackbarChange)
-    cv2.createTrackbar("Color_Cast", videoWindowName, colorCastChromaKeying, 10, onColorCastTrackbarChange)
-    cv2.createTrackbar("Softness", videoWindowName, softnessChromaKeying, 10, onSoftnessTrackbarChange)
+    # cv2.createTrackbar("Color_Cast", videoWindowName, colorCastChromaKeying, 5, onColorCastTrackbarChange)
+    cv2.createTrackbar("Softness", videoWindowName, softnessChromaKeying, 5, onSoftnessTrackbarChange)
 
     # Wait for user input (if any)
     key = cv2.waitKey(30)
