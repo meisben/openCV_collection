@@ -1,5 +1,3 @@
-
-
 # ------------------------------------------#
 # Resources                                 #
 # ------------------------------------------#
@@ -20,8 +18,8 @@ import numpy as np
 # Global Variables                          #
 # ------------------------------------------#
 
-# foregroundVideoPath = r"example_video\foreground\greenscreen-asteroid.mp4"
-foregroundVideoPath = r"example_video\foreground\greenscreen-demo.mp4"
+foregroundVideoPath = r"example_video\foreground\greenscreen-asteroid.mp4"
+# foregroundVideoPath = r"example_video\foreground\greenscreen-demo.mp4"
 
 imageWindowName = "Background color selector"
 videoWindowName = "Greenscreen Video"
@@ -106,16 +104,13 @@ def convertGreenPixelsToTransparent(myFrame):
         # blur mask for alpha trasnparency 
         kernelOptions = [11,21,25,29,31,33]
         kSize = kernelOptions[softnessChromaKeying]
-        print("kSize = ", kSize)
         maskBlur = cv2.morphologyEx(myMask, cv2.MORPH_DILATE, np.ones((5,5),np.uint8), iterations = softnessChromaKeying)
         maskBlur = cv2.bitwise_not(maskBlur) 
         maskBlur = cv2.GaussianBlur(maskBlur, (kSize,kSize), 0)
-        # print(maskBlur.max())
         
+        # apply alpha blending
         stackedMask = np.stack((maskBlur,)*3, axis=-1)
-        print("stackedMask max = ", stackedMask.max())
         stackedMask = (stackedMask / 255)
-        print("stackedMask max = ", stackedMask.max())
         result = myFrame * (stackedMask / 255)
         
 
@@ -180,7 +175,6 @@ def onToleranceTrackbarChange(*args):
 
 def onSoftnessTrackbarChange(*args):
     global softnessChromaKeying
-    print("hello")
     softnessChromaKeying = cv2.getTrackbarPos("Softness", videoWindowName) 
     print("Softness:", softnessChromaKeying)
     
